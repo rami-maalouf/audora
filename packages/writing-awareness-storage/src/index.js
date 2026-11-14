@@ -19,6 +19,17 @@ export const ELOQ_STORAGE_ROOT = path.join(
   'Eloq'
 );
 
+// eloq v2 (exact + snapback) writes snapshot.json (version 1) into its app data folder after
+// every read; it is the app's file, never a reader's.
+export const ELOQ_V2_STORAGE_ROOT = path.join(
+  os.homedir(),
+  'Library',
+  'Application Support',
+  'exact',
+  'studio.orbitlabs.eloq.app',
+  'data'
+);
+
 export const ELOQ_SANDBOX_STORAGE_ROOT = path.join(
   os.homedir(),
   'Library',
@@ -121,6 +132,10 @@ export async function loadWritingAwarenessSeedFromDisk(options = {}) {
 
 export async function loadEloqSnapshotFromDisk(options = {}) {
   const { snapshotPath } = getEloqStoragePaths(options);
+  // a bundled fallback may be copied into the old app's folder, never over the v2 app's own file
+  if (snapshotPath.startsWith(ELOQ_V2_STORAGE_ROOT + path.sep)) {
+    options = { ...options, preferFallbackSnapshot: false };
+  }
   await ensureEloqRoot(options);
   const fallbackSnapshotPath = options.fallbackSnapshotPath ?? null;
 
@@ -592,6 +607,7 @@ function resolveEloqStorageRoot(options = {}) {
   const candidates = Array.isArray(options.storageRootCandidates) && options.storageRootCandidates.length
     ? options.storageRootCandidates
     : [
+        ELOQ_V2_STORAGE_ROOT,
         options.sandboxStorageRoot ?? ELOQ_SANDBOX_STORAGE_ROOT,
         ELOQ_STORAGE_ROOT,
       ];
